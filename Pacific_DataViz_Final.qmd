@@ -1,0 +1,278 @@
+---
+title: "Guam's Red List Index and Global Warming"
+editor: visual
+format:
+  typst:
+    toc: false
+    margin:
+      x: 2cm
+      y: 2cm
+    columns: 1
+mainfont: "Calibri"
+---
+
+```{r}
+#| label: loading packages and data
+#| echo: false
+#| warning: false
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(gghighlight)
+library(ggtext)
+library(patchwork)
+library(ggforce)
+library(showtext)
+
+
+#load and clean Red List Index data
+path <-"Data/RedListIndex_data.csv"
+
+RedListIndex <- read.csv(path)
+
+RedListIndex <-RedListIndex |> 
+  select(c("Pacific.Island.Countries.and.territories", "TIME_PERIOD", "OBS_VALUE"))
+
+
+#load and clean Surface Temp data
+path <- "Data/Surface_Temp.csv"
+
+Surface_Temp <- read.csv(path)
+
+Surface_Temp <- Surface_Temp |> 
+  select(c("Pacific.Island.Countries.and.territories", "TIME_PERIOD", "OBS_VALUE", "UNIT_MEASURE"))
+
+Guam_Surface_Temp <- Surface_Temp |> 
+  filter(Pacific.Island.Countries.and.territories == "Guam")
+
+Surface_Temp_2025 <- Surface_Temp |> 
+  filter(TIME_PERIOD == "2025")
+
+
+#load and clean Sea Surface Temp data
+path <- "Data/Sea_Surface_Temp.csv"
+
+Sea_Surface_Temp <- read.csv(path)
+
+Sea_Surface_Temp <- Sea_Surface_Temp |> 
+  select(c("Pacific.Island.Countries.and.territories", "TIME_PERIOD", "OBS_VALUE", "UNIT_MEASURE"))
+
+Guam_Sea_Surface_Temp <- Sea_Surface_Temp |> 
+  filter(Pacific.Island.Countries.and.territories == "Guam")
+
+Sea_Surface_Temp_2025 <- Sea_Surface_Temp |> 
+  filter(TIME_PERIOD == "2025")
+
+```
+
+## The Red List Index
+
+The Red List Index (RLI) "shows trends in overall extinction risk for species and is used by governments to track their progress towards targets for reducing biodiversity loss" ([Red List Index](https://www.iucnredlist.org/assessment/red-list-index), n.d.). The index number can be between 1 and 0, with 1 indicating that all species are categorized as Least Concern, meaning that their extinction is not expected in the near future ([Red List Index](https://www.iucnredlist.org/assessment/red-list-index), n.d.). On the other end of the scale, 0 means that all species have gone Extinct ([Red List Index](https://www.iucnredlist.org/assessment/red-list-index), n.d.).
+
+## Guam's RLI
+
+Guam has the lowest Red List Index of any Pacific Island country or territory, with a value of 0.36 as of 2024. This is significantly lower than the territory with the next lowest RLI, the Northern Mariana Islands with a RLI of 0.58 in 2024. But why is Guam's RLI so much lower than other Pacific Island countries and territories?
+
+```{r}
+#| echo: false
+#| label: RLI graph
+#| warning: false
+#| out-width: 100%
+
+RLI_Graph <- RedListIndex |> 
+  ggplot(aes(x = TIME_PERIOD, y = OBS_VALUE, colour = Pacific.Island.Countries.and.territories)) +
+  geom_line(linewidth = 2, colour = "#EF233C") + 
+  gghighlight(Pacific.Island.Countries.and.territories == "Guam",
+              use_direct_label = FALSE,
+              use_group_by = FALSE,
+              unhighlighted_params = list(linewidth = 0.5)) +
+  geom_text(
+    label = "Guam, 0.36",
+    x = 2022,
+    y = 0.45,
+    colour = "#EF233C",
+    size = 4,
+    fontface = "bold"
+  ) +
+  geom_text(
+    label = "Northern Mariana Islands, 0.58",
+    x = 2019,
+    y = 0.56,
+    colour = "grey",
+    size = 3
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    axis.title = element_blank(),
+    axis.text = element_text(color = "grey40"),
+    axis.ticks = element_line(color = "grey91"),
+    plot.background = element_rect(fill = "grey98", color = "grey98"),
+    panel.background = element_rect(fill = "grey98", color = "grey98"),
+    plot.caption = element_text(colour = "grey40", size = 6)
+  ) +
+  labs(caption = "Data from the Red List Index dataset from the Pacific Data Hub's .Stat Explorer")
+
+RLI_Graph
+
+```
+
+{{< pagebreak >}}
+
+## Guam's Temperature Anomalies
+
+One potential explanation could be increasing temperatures due to global warming.
+
+```{r}
+#| echo: false
+#| label: Guam Temp Anomaly graph
+#| warning: false
+#| out-width: 100%
+
+Top_graph <- Guam_Surface_Temp |> 
+  ggplot(aes(x = TIME_PERIOD, y = OBS_VALUE)) +
+  geom_link2(aes(colour = after_stat(ifelse(y < 0, "negative", "positive"))), show.legend = FALSE, linewidth = 1) +
+  scale_color_manual(values = c("#6DAEDB", "#EF233C")) +
+  geom_hline(yintercept = 0, linetype = "dashed", linewidth = 0.5, colour = "grey40", alpha = 0.8) +
+  geom_vline(xintercept = 1994, linetype = "dashed", linewidth = 0.5, colour = "grey40", alpha = 0.8) +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    axis.title.y = element_text(color = "grey40", size = 6.25),
+    axis.title.x = element_blank(),
+    axis.text = element_text(color = "grey40"),
+    axis.text.x = element_blank(),
+    axis.ticks = element_line(color = "grey91"),
+    plot.background = element_rect(fill = "grey98", color = "grey98"),
+    panel.background = element_rect(fill = "grey98", color = "grey98"),
+    plot.margin = unit(c(0.25, 0.25, 0, 0.25), "cm")
+  ) +
+  labs(y = "Surface Temperature Anomalies")
+
+Bottom_graph <- Guam_Sea_Surface_Temp |> 
+  ggplot(aes(x = TIME_PERIOD, y = OBS_VALUE)) +
+  geom_link2(aes(colour = after_stat(ifelse(y < 0, "negative", "positive"))), show.legend = FALSE, linewidth = 1) +
+  scale_color_manual(values = c("#6DAEDB", "#EF233C")) +
+  geom_hline(yintercept = 0, linetype = "dashed", linewidth = 0.5, colour = "grey40", alpha = 0.8) +
+  geom_vline(xintercept = 1994, linetype = "dashed", linewidth = 0.5, colour = "grey40", alpha = 0.8) +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    axis.title.y = element_text(color = "grey40", size = 6.25),
+    axis.title.x = element_blank(),
+    axis.text.y = element_text(color = "grey40"),
+    axis.ticks = element_line(color = "grey91"),
+    plot.background = element_rect(fill = "grey98", color = "grey98"),
+    panel.background = element_rect(fill = "grey98", color = "grey98"),
+    plot.margin = unit(c(0, 0.25, 0.25, 0.25), "cm")
+  ) +
+  labs(y = "Sea Surface Temperature Anomalies")
+
+
+Top_graph / Bottom_graph +
+  plot_layout(heights = c(7, 7)) +
+  plot_annotation(caption = "Data from the Sea Surface and Surface Temperature Anomalies datasets from the Pacific Data Hub's .Stat Explorer") &
+  theme(plot.caption = element_text(colour = "grey40", size = 6))
+
+
+```
+
+Since 1994 Guam's mean sea and surface temperature anomalies per year have been consistently over 0.0 degrees Celsius, while prior to this, temperature anomalies generally tended to be much cooler. The above chart demonstrates this stark change in Guam's temperature patterns over time. As global temperatures rise, species are increasingly at risk with up to 14% of species in land-based ecosystems threatened with high extinction risk at 1.5 degree Celsius of warming ([WWF, n.d.](https://www.wwf.org.uk/learn/climate-change/effects/wildlife)). Specific to Guam, rising sea temperatures between 2013 and 2017 have killed over a third of the territory's coral reefs ([Pacific Daily News, 2019](https://www.guampdn.com/news/local/researchers-a-third-of-guams-coral-reefs-killed-by-rising-sea-temperatures/article_b3048069-6bf9-5107-9e33-68ecefab8d8b.html)).
+
+The influence of increasing sea and surface temperatures on Guam's ecosystems cannot be understated, but is this the only contributing factor?
+
+## 2025 Temperature Anomalies of Pacific Island Countries and Territories
+
+```{r}
+#| echo: false
+#| label: Pacific Island 2025 Temp Anomalies
+#| warning: false
+#| out-width: 100%
+
+
+Surface_Temp_2025 <- Surface_Temp_2025 |> 
+  mutate(Pacific.Island.Countries.and.territories = case_when(Pacific.Island.Countries.and.territories == "Micronesia, Federated State of" ~ "Micronesia",
+                                                              TRUE ~ Pacific.Island.Countries.and.territories))
+
+Sea_Surface_Temp_2025 <- Sea_Surface_Temp_2025 |> 
+  mutate(Pacific.Island.Countries.and.territories = case_when(Pacific.Island.Countries.and.territories == "Micronesia, Federated State of" ~ "Micronesia",
+                                                              TRUE ~ Pacific.Island.Countries.and.territories))
+
+left_graph <- Surface_Temp_2025 |> 
+  ggplot(aes(x = OBS_VALUE, y = Pacific.Island.Countries.and.territories)) +
+  geom_col(fill = "#EF233C") +
+  scale_x_reverse() +
+  scale_y_discrete(position = "right") +
+  gghighlight(Pacific.Island.Countries.and.territories == "Guam",
+              use_direct_label = FALSE) +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    axis.title.y = element_blank(),
+    axis.text.y = element_blank(),
+    axis.title.x = element_text(colour = "grey40", size = 7),
+    axis.text.x = element_text(colour = "grey40"),
+    axis.ticks = element_line(color = "grey91"),
+    plot.background = element_rect(fill = "grey98", color = "grey98"),
+    panel.background = element_rect(fill = "grey98", color = "grey98"),
+    plot.subtitle = element_text(hjust = 0.95, colour = "grey40", size = 7),
+    plot.margin = unit(c(0.25, 0, 0.25, 0), "cm")
+  ) +
+  labs(x = "Degrees in Celsius",
+       subtitle = "Surface Temperature Anomalies")
+
+right_graph <- Sea_Surface_Temp_2025 |> 
+  ggplot(aes(x = OBS_VALUE, y = Pacific.Island.Countries.and.territories)) +
+  geom_col(fill = "#EF233C") +
+  gghighlight(Pacific.Island.Countries.and.territories == "Guam",
+              use_direct_label = FALSE) +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    axis.title.y = element_blank(),
+    axis.text.y = element_blank(),
+    axis.title.x = element_text(colour = "grey40", size = 7),
+    axis.text.x = element_text(colour = "grey40"),
+    axis.ticks = element_line(color = "grey91"),
+    plot.background = element_rect(fill = "grey98", color = "grey98"),
+    panel.background = element_rect(fill = "grey98", color = "grey98"),
+    plot.subtitle = element_text(hjust = 0.05, colour = "grey40", size = 7),
+    plot.margin = unit(c(0.25, 0, 0.25, 0), "cm")
+  ) +
+  labs(x = "Degrees in Celsius",
+       subtitle = "Sea Surface Temperature Anomalies")
+
+labels <- Sea_Surface_Temp_2025 |> 
+  ggplot(aes(x = 1, y = Pacific.Island.Countries.and.territories, label = Pacific.Island.Countries.and.territories)) +
+  geom_text(color = ifelse(Sea_Surface_Temp_2025$Pacific.Island.Countries.and.territories == "Guam", "#EF233C", "grey40"),
+            fontface = ifelse(Sea_Surface_Temp_2025$Pacific.Island.Countries.and.territories == "Guam", "bold", "plain"),
+            size = case_when(Sea_Surface_Temp_2025$Pacific.Island.Countries.and.territories == "Guam" ~ 3.5, 
+                             Sea_Surface_Temp_2025$Pacific.Island.Countries.and.territories == "Northern Mariana Islands" ~ 2.20,
+                             TRUE ~ 2.5)) +
+  theme_void() +
+  theme(
+    plot.background = element_rect(fill = "grey98", color = "grey98"),
+    panel.background = element_rect(fill = "grey98", color = "grey98"),
+    plot.margin = unit(c(0.25, 0.2, 0.25, 0.2), "cm")
+  )
+
+left_graph + labels + right_graph +
+  plot_layout(widths = c(6, 3, 6)) + 
+  plot_annotation(caption = "Data from the Sea Surface and Surface Temperature Anomalies datasets from the Pacific Data Hub's .Stat Explorer") &
+  theme(plot.caption = element_text(colour = "grey40", size = 6))
+
+```
+
+In 2025, the mean sea and surface temperature anomalies for almost all Pacific Island countries and territories was greater than 0.3 degrees Celsius, clearly showing the direct consequences of global warming on the region. Interestingly, Guam's anomalies are not the highest for either sea or surface temperatures, these belong to Papua New Guinea and Palau respectively. This indicates that global warming driven temperature increases cannot be solely responsible for Guam's low RLI.
+
+## Other Factors
+
+There are indeed many compounding factors contributing to Guam's low RLI. One of which is the presence of several invasive species such as the Brown Tree Snake, which has had devastating impacts on Guam's wild bird population ([Guam Biodiversity, 2019](https://www.islandconservation.org/guam-biodiversity-threat-invasive-species/)). Additionally, rising sea levels and extreme weather events put pressure on Guam's natural environments ([Rafay Afzel, 2025](https://www.pacificislandtimes.com/post/guam-s-battle-against-climate-change)), while U.S military operations and building projects further threaten species' habitats ([Cheung, 2023](https://www.courthousenews.com/military-operations-on-guam-spur-endangered-species-challenge/)).
+
+## Conclusion
+
+While the increasing temperature anomalies experienced by Guam are surely affecting wildlife on the island, this alone cannot explain Guam's low Red List Index in comparison to the other Pacific Island countries and territories. Many factors are responsible for the state of Guam's biodiversity, and holistic, multifaceted solutions are required to tackle this problem. Measures such as coral reef restoration projects ([Guam Coral Reef Initiative, n.d.)](https://www.guamcoralreefs.info/our-work), and the Brown Tree Snake Eradication and Control Act ([U.S. Fish and Wildlife Service, n.d.](https://www.fws.gov/law/brown-tree-snake-eradication-and-control-act)) are already being implemented; however, further action is still required to ensure Guam's incredible native biodiversity moves out of the red.\
+
+------------------------------------------------------------------------
+
+Created by Naomi Richards using data from Pacific Data Hub for the 2026 Pacific DataViz Challenge. The data, and R code used to create this Quarto PDF can be found on the associated [GitHub Repository](https://github.com/naomirichards/Pacific_DataViz_2026/tree/main). This work is made available under a CC0 license.
